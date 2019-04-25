@@ -87,6 +87,39 @@ Server
                 - ${linux:system:name}.${linux:system:domain}
                 - ${linux:system:name}
 
+LDAP and GSSAPI
+~~~~~~~~~~~~~~~
+
+.. code-block:: yaml
+
+    parameters:
+      dovecot:
+        server:
+          gssapi:
+            host: imap01.example.com
+            keytab: /etc/dovecot/krb5.keytab
+            realms:
+              - example.com
+            default_realm: example.com
+
+          userdb:
+            driver: ldap
+          passdb:
+            driver: ldap
+          ldap:
+            servers:
+              - ldaps://idm01.example.com
+              - ldaps://idm02.example.com
+            basedn: dc=example,dc=com
+            bind:
+              dn: uid=dovecot,cn=users,cn=accounts,dc=example,dc=com
+              password: password
+            # Auth users by binding as them
+            auth_bind:
+              enabled: true
+              userdn: "mail=%u,cn=users,cn=accounts,dc=example,dc=com"
+            user_filter: "(&(objectClass=posixAccount)(mail=%u))"
+
 Director
 ~~~~~~~~
 
@@ -145,3 +178,36 @@ Read more
 =========
 
 * http://wiki2.dovecot.org/
+
+Documentation and Bugs
+======================
+
+To learn how to install and update salt-formulas, consult the documentation
+available online at:
+
+    http://salt-formulas.readthedocs.io/
+
+In the unfortunate event that bugs are discovered, they should be reported to
+the appropriate issue tracker. Use Github issue tracker for specific salt
+formula:
+
+    https://github.com/salt-formulas/salt-formula-dovecot/issues
+
+For feature requests, bug reports or blueprints affecting entire ecosystem,
+use Launchpad salt-formulas project:
+
+    https://launchpad.net/salt-formulas
+
+You can also join salt-formulas-users team and subscribe to mailing list:
+
+    https://launchpad.net/~salt-formulas-users
+
+Developers wishing to work on the salt-formulas projects should always base
+their work on master branch and submit pull request against specific formula.
+
+    https://github.com/salt-formulas/salt-formula-dovecot
+
+Any questions or feedback is always welcome so feel free to join our IRC
+channel:
+
+    #salt-formulas @ irc.freenode.net

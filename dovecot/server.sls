@@ -2,6 +2,12 @@
 
 {%- if server.enabled %}
 
+include:
+- dovecot.server.common
+{%- if server.service.director.get('enabled', False) and server.service.director.get('separate_instance', False) %}
+- dovecot.server.director
+{%- endif %}
+
 dovecot_config:
   file.managed:
   - name: /etc/dovecot/dovecot.conf
@@ -15,28 +21,12 @@ dovecot_config:
   - watch_in:
     - service: dovecot_service
 
-dovecot_sql_config:
-  file.managed:
-  - name: /etc/dovecot/dovecot-sql.conf
-  - source: salt://dovecot/files/dovecot-sql.conf
-  - mode: 640
-  - user: root
-  - group: dovecot
-  - template: jinja
-  - require:
-    - pkg: dovecot_packages
-  - watch_in:
-    - service: dovecot_service
-
-dovecot_packages:
-  pkg.installed:
-    - names: {{ server.pkgs }}
-    - watch_in:
-      service: dovecot_service
-
 dovecot_service:
   service.running:
     - name: {{ server.service_name }}
+    {%- if grains.get('noservices') %}
+    - onlyif: /bin/false
+    {%- endif %}
     - require:
       - file: dovecot_config
 
@@ -46,54 +36,21 @@ dovecot_index_dir:
   file.directory:
     - name: {{ server.index.path }}
     - owner: vmail
-    - group: vmail
+    - optional_groups: vmail
     - mode: 0770
+    {%- if grains.get('noservices') %}
+    - onlyif: /bin/false
+    {%- endif %}
     - require:
       - pkg: dovecot_packages
     - required_in:
       - service: dovecot_service
 
-{%- endif %}
-
-{%- if server.ssl.get('enabled', False) %}
-
-/etc/dovecot/ssl:
-  file.directory:
-  - user: root
-  - group: dovecot
-  - mode: 750
-  - require:
-    - pkg: dovecot_packages
-
-/etc/dovecot/ssl/ssl_cert.crt:
-  file.managed:
-  - source: salt://dovecot/files/ssl_cert_all.crt
-  - template: jinja
-  - user: root
-  - group: dovecot
-  - mode: 640
-  - require:
-    - file: /etc/dovecot/ssl
-  - watch_in:
-    - service: dovecot_service
-
-/etc/dovecot/ssl/ssl_key.key:
-  file.managed:
-  - contents_pillar: dovecot:server:ssl:key
-  - user: root
-  - group: dovecot
-  - mode: 640
-  - require:
-    - file: /etc/dovecot/ssl
-  - watch_in:
-    - service: dovecot_service
-
-{%- endif %}
-
 dovecot_sieve_dir:
   file.directory:
   - name: /var/lib/dovecot/sieve
-  - group: vmail
+  - optional_groups: vmail
+  - makedirs: True
   - mode: 775
   - require:
     - pkg: dovecot_packages
@@ -112,19 +69,21 @@ dovecot_default_sieve_compile:
   - watch:
     - file: dovecot_default_sieve
 
+{%- endif %}
+
 {%- if server.expunge.enabled %}
 
 cron_expunge_junk:
   cron.present:
     - name: doveadm expunge -A mailbox Junk savedbefore {{ server.expunge.junk_days }}d
     - hour: 1
-    - minute: 15
+    - minute: random
 
 cron_expunge_trash:
   cron.present:
     - name: doveadm expunge -A mailbox Trash savedbefore {{ server.expunge.trash_days }}d
     - hour: 2
-    - minute: 15
+    - minute: random
 
 {%- endif %}
 
